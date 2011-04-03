@@ -38,22 +38,22 @@ function bind(fn, scope) {
 
 
 
-var Client = function(host, port, nick, user, real) {
+var Client = function(host, port, nick) {
     events.EventEmitter.call(this);
 
     this.host = host;
     this.port = port;
     
     this.nick = nick;
-    this.user = user;
-    this.real = real;
+    this.user = 'guest';
+    this.real = 'Guest';
     this.pass = ''
 
-    this.encoding = 'utf8';
     this.connected = false;
     this.tryReconnect = true; // when [true], the client will attempt a reconnect if disconnected for any reason
 
 
+    this._encoding = 'utf8';
     this._connection = -1;
     this._receiveBuffer = ''; // this is used to store incoming information until it can be appropriatly handled
     this._waitingForJoinedEvent = []; // list of channels that are awaiting a 'joined' notification
@@ -154,7 +154,7 @@ Client.prototype._parseReceiveBuffer = function() {
 
 Client.prototype.connect = function() {
     this._connection = net.createConnection(this.port, this.host);
-    this._connection.setEncoding(this.encoding);
+    this._connection.setEncoding(this._encoding);
     this._connection.on('connect', bind(this.onConnect, this));
     this._connection.on('secure', bind(this.onSecure, this));
     this._connection.on('data', bind(this.onData, this));
@@ -212,7 +212,7 @@ Client.prototype.send = function() {
         msg.push(arguments[i]);
     }
     msg = msg.join(' ') + '\r\n';
-    this._connection.write(msg, this.encoding, this.onWrite);
+    this._connection.write(msg, this._encoding, this.onWrite);
 };
 
 

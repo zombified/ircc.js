@@ -1,7 +1,7 @@
 var sys = require('sys');
 var irc = require('./ircc');
 
-var c = new irc.Client('irc.freenode.net', 6667, 'guest', 'guest', 'Guest');
+var c = new irc.Client('irc.freenode.net', 6667, 'guest');
 var joined = false;
 
 c.on('001', function() { c.join('#atestchannel'); });
