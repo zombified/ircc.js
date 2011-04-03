@@ -172,6 +172,11 @@ Client.prototype.connect = function() {
     this.on('ERR_NICKNAMEINUSE', this.onERR_NICKNAMEINUSE);
     this.on('PRIVMSG', this.onPRIVMSG);
     this.on('NOTICE', this.onNOTICE);
+    this.on('JOIN', this.onJOIN);
+    this.on('PART', this.onPART);
+    this.on('QUIT', this.onQUIT);
+    this.on('KICK', this.onKICK);
+    this.on('NICK', this.onNICK);
 };
 
 /*
@@ -296,9 +301,13 @@ Client.prototype.notice = function(to, message) {
 };
 
 
-
-
-
+/*
+    to: list of channels and/or nicks to send the message to
+    action: string that describes the action of the bot
+*/
+Client.prototype.me = function(to, action) {
+    this.privmsg(to, '\u0001ACTION ' + action + '\u0001');
+};
 
 
 Client.prototype.onConnect = function() {
@@ -390,13 +399,49 @@ Client.prototype.onERR_NICKNAMEINUSE = function(line) {
 };
 
 Client.prototype.onPRIVMSG = function(line) {
-    this.emit('msg', line.server_or_nick, line.targets[0], line.message);
+    // strip off unnecessary unicode values at the beginning and
+    //  end of the string
+    msg = line.message.split('\u0001');
+    if( msg.length > 1 ) {
+        msg = msg[1];
+    }
+    else {
+        msg = msg[0];
+    }
+
+    // if the privmsg is an action, then emit the action event and forego the 
+    //  regular msg event
+    if( _(msg).startsWith('ACTION') ) {
+        this.emit('action', line.server_or_nick, line.targets[0], msg.substr(7));
+        return;
+    }
+   
+    this.emit('msg', line.server_or_nick, line.targets[0], msg);
 };
 
 Client.prototype.onNOTICE = function(line) {
     this.emit('not', line.server_or_nick, line.targets[0], line.message);
 };
 
+Client.prototype.onJOIN = function(line) {
+    this.emit('userJoined', line.server_or_nick, line.message);
+};
+
+Client.prototype.onPART = function(line) {
+    this.emit('userLeft', line.server_or_nick, line.targets);
+};
+
+Client.prototype.onQUIT = function(line) {
+    this.emit('userQuit', line.server_or_nick, line.message);
+};
+
+Client.prototype.onKICK = function(line) {
+    this.emit('userKicked', line.server_or_nick, line.targets[0], line.params[0]);
+};
+
+Client.prototype.onNICK = function(line) {
+    this.emit('userRenamed', line.server_or_nick, line.message);
+}
 
 
 module.exports.Client = Client;
