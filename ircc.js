@@ -57,6 +57,7 @@ var Client = function(host, port, nick, user, real) {
     this._connection = -1;
     this._receiveBuffer = ''; // this is used to store incoming information until it can be appropriatly handled
     this._waitingForJoinedEvent = []; // list of channels that are awaiting a 'joined' notification
+    this._namesBuffer = {}; // keys found in this object represent channel names, and the values represent a list of names in the channel
 };
 sys.inherits(Client, events.EventEmitter);
 
@@ -166,8 +167,11 @@ Client.prototype.connect = function() {
     this.on('RPL_TOPIC', this.onRPL_TOPIC);
     this.on('RPL_NOTOPIC', this.onRPL_NOTOPIC);
     this.on('RPL_NAMREPLY', this.onRPL_NAMREPLY);
+    this.on('RPL_ENDOFNAMES', this.onRPL_ENDOFNAMES);
     this.on('PING', this.onPING);
     this.on('ERR_NICKNAMEINUSE', this.onERR_NICKNAMEINUSE);
+    this.on('PRIVMSG', this.onPRIVMSG);
+    this.on('NOTICE', this.onNOTICE);
 };
 
 /*
@@ -255,6 +259,42 @@ Client.prototype.topic = function(channel, topic) {
     this.send('TOPIC', channel, topic);
 };
 
+/*
+    When a full list of names has been returned, the 'names' event will be emitted.
+
+    channels: optional. list of channels that names are being requested for.
+*/
+Client.prototype.names = function(channels) {
+    // specific channels to get names for
+    if( !_.isUndefined(channels) && channels.length > 0 ) {
+        // if there is a request for names out for a channel already then there's no reason to send another request
+        channels = _.select(channels, bind(function(channel){return !(channel in this._namesBuffer); }, this));
+        if( channels.length <= 0 ) { return; }
+
+        this.send('NAMES', channels.join(','));
+        return;
+    }
+
+    // all names from all visible channels
+    this.send('NAMES');
+};
+
+/*
+    to: list of channels and users to send the message to
+    message: the message to send
+*/
+Client.prototype.privmsg = function(to, message) {
+    this.send('PRIVMSG', to.join(','), ':' + message)
+};
+
+/*
+    to: list of channels and users to send the message to
+    message: the message to send
+*/
+Client.prototype.notice = function(to, message) {
+    this.send('NOTICE', to.join(','), ':' + message)
+};
+
 
 
 
@@ -303,7 +343,7 @@ Client.prototype.onRPL_TOPIC = function(line) {
     var i;
     for(var p = 0; p < line.params.length; p++) {
         i = _.indexOf(this._waitingForJoinedEvent, line.params[p]);
-        if( i >= 0) {
+        if( i >= 0 ) {
             this.emit('joined', line.params[p]);
             this._waitingForJoinedEvent = this._waitingForJoinedEvent.splice(i,-1);
         }
@@ -322,11 +362,22 @@ Client.prototype.onRPL_NAMREPLY = function(line) {
     var i;
     for(var p = 0; p < line.params.length; p++) {
         i = _.indexOf(this._waitingForJoinedEvent, line.params[p]);
-        if( i >= 0) {
+        if( i >= 0 ) {
             this.emit('joined', line.params[p]);
             this._waitingForJoinedEvent = this._waitingForJoinedEvent.splice(i,-1);
         }
     }
+
+    // add the names to the appropriate portion of the names buffer
+    if( !(line.params[1] in this._namesBuffer) ) {
+        this._namesBuffer[line.params[1]] = [];
+    }
+    this._namesBuffer[line.params[1]].push.apply(this._namesBuffer[line.params[1]], line.message.split(' '));
+};
+
+Client.prototype.onRPL_ENDOFNAMES = function(line) {
+    this.emit('names', this._namesBuffer[line.params[0]]);
+    delete this._namesBuffer[line.params[0]];
 };
 
 Client.prototype.onPING = function(line) {
@@ -336,6 +387,14 @@ Client.prototype.onPING = function(line) {
 
 Client.prototype.onERR_NICKNAMEINUSE = function(line) {
     this.emit('nicknameInUse');
+};
+
+Client.prototype.onPRIVMSG = function(line) {
+    this.emit('msg', line.server_or_nick, line.targets[0], line.message);
+};
+
+Client.prototype.onNOTICE = function(line) {
+    this.emit('not', line.server_or_nick, line.targets[0], line.message);
 };
 
 

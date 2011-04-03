@@ -71,24 +71,28 @@ Below is a list of all the events that get emitted, excluding the numeric/human 
 
     Emitted when the client receives info about the topic -- the topic parameter will be an empty string if no topic is set, otherwise it will be the value the server reports is the topic.
 
+*   **names**, params: names
 
-# License
-Copyright (C) 2011 by Joel Kleier
+    names is a list of strings. May be empty or undefined.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+    Emitted when the client receives a list of names from the server.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+*   **msg**, params: from, to, message
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+    from: nick or channel message is from,  
+    to: the bots nick or the channel the message was sent to
+    message: the message that was sent
+
+    Emitted when the client receives a 'PRIVMSG' line
+
+*   **not**, params: from, to, message
+
+    from: nick or channel message is from,  
+    to: the bots nick or the channel the message was sent to
+    message: the message that was sent
+
+    Emitted when the client receives a 'NOTICE' line
+
+
+
+
